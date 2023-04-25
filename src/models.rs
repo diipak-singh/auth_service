@@ -18,3 +18,9 @@ pub struct NewUser<'a> {
     pub email: &'a str,
     pub created_at: chrono::NaiveDateTime,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AddUserResponse {
+    pub user: User,
+    pub token: String,
+}

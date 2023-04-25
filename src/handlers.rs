@@ -1,12 +1,14 @@
 use super::models::{NewUser, User};
 use super::schema::users::dsl::*;
 use super::Pool;
+use crate::auth::generate_token;
 use crate::diesel::QueryDsl;
 use crate::diesel::RunQueryDsl;
 use actix_web::{web, Error, HttpResponse};
 use diesel::dsl::{delete, insert_into};
 use serde::{Deserialize, Serialize};
 use std::vec::Vec;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InputUser {
@@ -45,9 +47,12 @@ pub async fn add_user(
     db: web::Data<Pool>,
     item: web::Json<InputUser>,
 ) -> Result<HttpResponse, Error> {
+    let uuid = Uuid::new_v4();
+    let token = generate_token(&item.email, uuid.to_string()).unwrap();
+
     Ok(web::block(move || add_single_user(db, item))
         .await
-        .map(|user| HttpResponse::Created().json(user))
+        .map(|user| HttpResponse::Ok().header("acces_token", token).json(user))
         .map_err(|_| HttpResponse::InternalServerError())?)
 }
 

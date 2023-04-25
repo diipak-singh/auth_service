@@ -7,6 +7,7 @@ use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
+use log::{info, trace, warn};
 
 mod auth;
 mod errors;
@@ -26,24 +27,26 @@ async fn main() -> std::io::Result<()> {
     let pool: Pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool.");
-
     // Start http server
     HttpServer::new(move || {
         let auth = HttpAuthentication::bearer(validator);
         App::new()
-            //.wrap(auth)
+            .wrap(auth)
             .data(pool.clone())
             .route("/users", web::get().to(handlers::get_users))
             .route("/users/{id}", web::get().to(handlers::get_user_by_id))
             .route("/users", web::post().to(handlers::add_user))
             .route("/users/{id}", web::delete().to(handlers::delete_user))
     })
-    .bind("127.0.0.1:8082")?
+    .bind("127.0.0.1:8084")?
     .run()
     .await
 }
 
 async fn validator(req: ServiceRequest, credentials: BearerAuth) -> Result<ServiceRequest, Error> {
+    if req.path() == "/users" && req.method() == "POST" {
+        return Ok(req);
+    }
     let config = req
         .app_data::<Config>()
         .map(|data| data.get_ref().clone())
